@@ -2,7 +2,7 @@
 # deviceQuery CMakeLists.txt 【带完整详细注释，可直接覆盖粘贴】
 # 用途：CUDA Samples 探针程序 deviceQuery 构建脚本
 # ==============================================================
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # 指定本CMake脚本要求的最低CMake版本
 # CMAKE_CUDA_ARCHITECTURES、CUDA导入目标、生成器表达式等特性依赖3.20+
 cmake_minimum_required(VERSION 3.20)
@@ -21,6 +21,9 @@ endif()
 # 定义项目名称 deviceQuery
 # LANGUAGES C CXX CUDA：声明项目使用C、C++、CUDA三种语言
 # 声明CUDA语言后，CMake自动寻找nvcc，接管CUDA代码编译流程
+# project(deviceQuery LANGUAGES C CXX CUDA)
+
+# 只声明C CXX，全部源码交给clang编译器处理
 project(deviceQuery LANGUAGES C CXX CUDA)
 
 # 加载CUDA样例公共配置脚本，所有CUDA样例共用
@@ -30,11 +33,6 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/CudaSampleCommon.cmake")
 # 查找本机CUDA Toolkit工具包，REQUIRED表示找不到则直接终止CMake配置并报错
 # 成功后自动定义导入目标 CUDA::cudart，以及变量 CUDAToolkit_INCLUDE_DIRS
 find_package(CUDAToolkit REQUIRED)
-
-# 【旧式CMake全局头文件】添加samples公共Common目录
-# 作用：给当前目录所有目标暴露Common下的头文件
-# 现代CMake更推荐使用 target_include_directories 仅针对单个目标设置
-include_directories(../../../Common)
 
 # 创建可执行程序目标 deviceQuery，源码文件为 deviceQuery.cpp
 # CMake识别源码并根据project声明的CUDA语言，将CUDA相关代码交由nvcc编译
@@ -63,6 +61,29 @@ target_include_directories(deviceQuery PRIVATE
 # CUDA::cudart 是CMake导入目标，自带头文件、库路径、依赖，比手动写-lcudart更稳定跨平台
 # PUBLIC：本目标链接cudart；如果其他目标链接deviceQuery，会继承cudart依赖；可执行文件场景PUBLIC/PRIVATE差别很小
 target_link_libraries(deviceQuery PUBLIC
+    CUDA::cudart
+)
+
+# 引入安装脚本模块，注册安装规则
+include(InstallSamples)
+# 设置样例安装逻辑，cmake --install 时将exe复制到指定安装目录
+# 普通编译（cmake --build）不会触发安装，不影响日常调试构建
+setup_samples_install()
+
+# ========== 目标2：新增 Demo.exe 【练习代码】 ==========
+add_executable(Demo Demo.cpp)
+
+# Demo 使用C++17
+target_compile_features(Demo PRIVATE cxx_std_17 cuda_std_17)
+
+# Demo头文件路径，和deviceQuery保持一致，可以include helper_cuda.h
+target_include_directories(Demo PRIVATE
+    ${CUDAToolkit_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../Common
+)
+
+# Demo同样链接CUDA Runtime库，可以调用cudaMalloc / cudaFree / cudaGetLastError等API
+target_link_libraries(Demo PUBLIC
     CUDA::cudart
 )
 
