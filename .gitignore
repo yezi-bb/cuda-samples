@@ -4,7 +4,6 @@ test-results*/
 .vs
 .vscode
 .clangd
-test
 settings.json
 launch.json
 __pycache__/
